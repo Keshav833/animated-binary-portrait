@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#010603">
+<title>Binary Portrait</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#010603}
+body{overflow-x:hidden;color:#b8ffca;font-family:"Courier New",monospace}
+#background{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:block}
+.hero{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:center;gap:clamp(16px,4vw,64px);width:min(1200px,100%);min-height:100vh;min-height:100svh;margin:0 auto;padding:40px clamp(24px,6vw,88px)}
+.greeting-stack{grid-column:1;grid-row:1;display:grid;gap:clamp(12px,2vh,24px);text-align:left}
+.greeting{margin:0;text-shadow:0 0 12px rgba(0,255,90,.7)}
+.greeting--top{font-size:clamp(28px,3.6vw,46px);font-weight:700;letter-spacing:.05em}
+.greeting--bottom{font-size:clamp(24px,3.5vw,44px);letter-spacing:.07em}
+.portrait-frame{grid-column:2;grid-row:1 / span 2;position:relative;justify-self:center;width:min(100%,76vh);width:min(100%,76svh);aspect-ratio:1}
+#portrait{position:absolute;inset:0;z-index:1;width:100%;height:100%;display:block;pointer-events:none}
+.birthday-quote{grid-column:1;grid-row:2;margin:0;color:rgba(184,255,202,.88);font-size:clamp(17px,1.8vw,22px);line-height:1.7;letter-spacing:.025em;text-shadow:0 0 9px rgba(0,255,90,.35)}
+.scroll-cue{display:none}
+@media(max-width:600px){
+  .hero{display:flex;flex-direction:column;justify-content:flex-start;gap:0;min-height:auto;padding:24px 0 0}
+  .greeting-stack{width:100%;gap:4px;padding:0 12px;text-align:center}
+  .greeting--top{font-size:clamp(26px,8vw,38px)}
+  .greeting--bottom{font-size:clamp(22px,6.5vw,32px)}
+  .portrait-frame{flex:none;width:min(98vw,72svh);margin-top:8px}
+  .scroll-cue{display:block;align-self:center;margin:0;padding:0 0 8px;color:rgba(184,255,202,.72);font-size:14px;letter-spacing:.12em;text-align:center}
+  .scroll-cue span{display:block;font-size:22px;line-height:1.1;animation:scroll-nudge 1.2s ease-in-out infinite}
+  .birthday-quote{padding:10px 24px 40px;font-size:18px;line-height:1.6;text-align:center}
+}
+.typing-cursor{display:inline-block;height:1em;margin-left:.08em;border-right:.08em solid currentColor;vertical-align:-.12em;animation:cursor-blink .75s steps(2,start) infinite}
+.heart{display:inline-block;margin-left:.2em;color:#ff6b81;text-shadow:0 0 16px rgba(255,60,100,.9);opacity:0;transform:scale(.3);transform-origin:center}
+.heart.is-visible{opacity:1;transform:scale(1);animation:heart-beat .9s ease-in-out infinite}
+.greeting.typing-done .typing-cursor{display:none}
+@keyframes cursor-blink{to{visibility:hidden}}
+@keyframes heart-beat{50%{transform:scale(1.22)}}
+@keyframes scroll-nudge{50%{transform:translateY(5px)}}
+@media(prefers-reduced-motion:reduce){.typing-cursor,.heart.is-visible{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="background"></canvas>
+<main>
+  <section class="hero" aria-label="Birthday greeting">
+    <div class="greeting-stack">
+      <h1 class="greeting greeting--top" aria-label="Happy Birthday"><span class="typed-text" data-text="Happy Birthday"></span><span class="typing-cursor" aria-hidden="true"></span></h1>
+      <p class="greeting greeting--bottom" aria-label="Sakshi DiDi"><span class="typed-text" data-text="Sakshi DiDi"></span><span class="heart" aria-hidden="true">♥</span><span class="typing-cursor" aria-hidden="true"></span></p>
+    </div>
+    <div class="portrait-frame"><canvas id="portrait"></canvas></div>
+    <p class="scroll-cue" aria-hidden="true">Scroll for your wish<span>↓</span></p>
+    <p class="birthday-quote">May God bless you with endless happiness, health, and success this year. Love you to the moon and back!</p>
+  </section>
+</main>
+<script>
+(() => {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const greetings = [...document.querySelectorAll('.typed-text')];
+  async function typeGreetings(){
+    if(reduceMotion){
+      greetings.forEach(text=>{
+        text.textContent=text.dataset.text;
+        text.closest('.greeting').classList.add('typing-done');
+      });
+      document.querySelector('.heart').classList.add('is-visible');
+      return;
+    }
+    for(const text of greetings){
+      for(const character of text.dataset.text){
+        text.textContent+=character;
+        await new Promise(resolve=>setTimeout(resolve,65));
+      }
+      text.closest('.greeting').classList.add('typing-done');
+    }
+    document.querySelector('.heart').classList.add('is-visible');
+  }
+  typeGreetings();
+  const image = new Image();
+  image.src = './profile.png';
+
+  // Background: continuous falling binary columns, plus occasional brighter code.
+  const bg = document.getElementById('background');
+  const b = bg.getContext('2d');
+  let vw=0,vh=0,dpr=1,columns=[],fontSize=17;
+  function resizeBackground(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    vw=innerWidth; vh=innerHeight;
+    bg.width=Math.floor(vw*dpr); bg.height=Math.floor(vh*dpr);
+    b.setTransform(dpr,0,0,dpr,0,0);
+    const count=Math.ceil(vw/fontSize);
+    columns=Array.from({length:count},()=>({
+      y:Math.random()*-vh/fontSize,
+      speed:.28+Math.random()*.9,
+      trail:8+Math.floor(Math.random()*24),
+      bright:Math.random()
+    }));
+  }
+  function drawBackground(){
+    b.fillStyle='rgba(1,6,3,0.13)';
+    b.fillRect(0,0,vw,vh);
+    b.font=`${fontSize}px monospace`;
+    b.textBaseline='top';
+    for(let i=0;i<columns.length;i++){
+      const c=columns[i], x=i*fontSize;
+      for(let k=0;k<c.trail;k++){
+        const y=(c.y-k)*fontSize;
+        if(y<0||y>vh)continue;
+        const head=k===0;
+        const alpha=head?.95:Math.max(.035,.28*(1-k/c.trail));
+        b.fillStyle=head?'rgba(165,255,184,.95)':`rgba(0,${Math.floor(85+90*(1-k/c.trail))},${Math.floor(30+30*(1-k/c.trail))},${alpha})`;
+        b.fillText(Math.random()>.5?'1':'0',x,y);
+      }
+      c.y+=c.speed;
+      if(c.y*fontSize-c.trail*fontSize>vh && Math.random()>.985){
+        c.y=-Math.random()*40;
+        c.speed=.28+Math.random()*.9;
+        c.trail=8+Math.floor(Math.random()*24);
+      }
+    }
+    if(sample.width&&sample.height){
+      const box=portrait.getBoundingClientRect();
+      b.globalCompositeOperation='destination-out';
+      b.drawImage(sample,box.left,box.top,box.width,box.height);
+      b.globalCompositeOperation='source-over';
+    }
+    if(!reduceMotion)requestAnimationFrame(drawBackground);
+  }
+
+  // Portrait: source image is used only as a luminance/alpha map.
+  // Every visible mark on the portrait is drawn as a 0 or 1.
+  const portrait=document.getElementById('portrait');
+  const p=portrait.getContext('2d');
+  const sample=document.createElement('canvas');
+  const s=sample.getContext('2d',{willReadFrequently:true});
+  let dots=[],cell=8,pw=0,ph=0;
+
+  function buildPortrait(){
+    const box=portrait.getBoundingClientRect();
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    pw=Math.max(1,Math.floor(box.width*dpr));
+    ph=Math.max(1,Math.floor(box.height*dpr));
+    portrait.width=pw; portrait.height=ph;
+
+    // Use a smaller sampling grid, preserving the original portrait's full silhouette.
+    cell=Math.max(6,Math.round(6*dpr));
+    const gw=Math.ceil(pw/cell), gh=Math.ceil(ph/cell);
+    sample.width=gw; sample.height=gh;
+    s.clearRect(0,0,gw,gh);
+
+    // Slightly zoom in so the portrait fills more of the canvas.
+    const scale=Math.min(gw/image.width,gh/image.height)*1.15;
+    const dw=image.width*scale, dh=image.height*scale;
+    const dx=(gw-dw)/2, dy=(gh-dh)/2;
+    s.drawImage(image,dx,dy,dw,dh);
+
+    const pixels=s.getImageData(0,0,gw,gh).data;
+    dots=[];
+    for(let y=0;y<gh;y++){
+      for(let x=0;x<gw;x++){
+        const i=(y*gw+x)*4;
+        const alpha=pixels[i+3]/255;
+        if(alpha<.035)continue;
+        const luminance=(.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2])/255;
+        // Preserve the source's highlights, shadows and faded mid-tones.
+        // Even very dark opaque areas get dim green digits, so hair/jacket remain defined.
+        const tone=Math.pow(luminance,.78);
+        const visibility=Math.min(1,alpha*1.35);
+        dots.push({
+          x,y,tone,visibility,
+          phase:(x*17+y*31)%12
+        });
+      }
+    }
+  }
+
+  function drawPortrait(t){
+    p.clearRect(0,0,pw,ph);
+    // Gentle green halo behind the binary silhouette.
+    const halo=p.createRadialGradient(pw*.5,ph*.48,0,pw*.5,ph*.48,pw*.48);
+    halo.addColorStop(0,'rgba(0,255,65,.075)');
+    halo.addColorStop(1,'rgba(0,255,65,0)');
+    p.fillStyle=halo;p.fillRect(0,0,pw,ph);
+
+    const frame=Math.floor(t/700);
+    p.font=`${cell*.72}px "Courier New",monospace`;
+    p.textBaseline='top';
+    for(const q of dots){
+      const shade=.13+q.tone*.87;
+      const green=Math.floor(42+q.tone*190);
+      const alpha=Math.min(.98,(.12+shade*.76)*q.visibility);
+      p.fillStyle=`rgba(${Math.floor(8+q.tone*8)},${green},${Math.floor(28+q.tone*35)},${alpha})`;
+      p.shadowColor=`rgba(30,255,80,${Math.min(.8,q.tone*.38)})`;
+      p.shadowBlur=q.tone>.72?cell*.6:0;
+      const bit=((frame+q.phase)&1)?'1':'0';
+      p.fillText(bit,q.x*cell,q.y*cell);
+    }
+    p.shadowBlur=0;
+    if(!reduceMotion)requestAnimationFrame(drawPortrait);
+  }
+
+  image.onload=()=>{
+    resizeBackground();
+    buildPortrait();
+    drawBackground();
+    drawPortrait(0);
+  };
+  window.addEventListener('resize',()=>{
+    resizeBackground();
+    if(image.complete&&image.naturalWidth){buildPortrait();drawPortrait(performance.now());}
+  });
+})();
+</script>
+</body>
+</html>

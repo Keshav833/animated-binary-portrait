@@ -10,12 +10,12 @@
 html,body{margin:0;min-height:100%;background:#010603}
 body{overflow-x:hidden;color:#b8ffca;font-family:"Courier New",monospace}
 #background{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:block}
-.hero{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:center;gap:clamp(16px,4vw,64px);width:min(1200px,100%);min-height:100vh;min-height:100svh;margin:0 auto;padding:40px clamp(24px,6vw,88px)}
+.hero{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);align-items:center;gap:clamp(16px,4vw,64px);width:min(1200px,100%);min-height:100vh;min-height:100svh;margin:0 auto;padding:40px clamp(24px,6vw,88px) 0}
 .greeting-stack{grid-column:1;grid-row:1;display:grid;gap:clamp(12px,2vh,24px);text-align:left}
 .greeting{margin:0;text-shadow:0 0 12px rgba(0,255,90,.7)}
 .greeting--top{font-size:clamp(28px,3.6vw,46px);font-weight:700;letter-spacing:.05em}
 .greeting--bottom{font-size:clamp(24px,3.5vw,44px);letter-spacing:.07em}
-.portrait-frame{grid-column:2;grid-row:1 / span 2;position:relative;justify-self:center;width:min(100%,76vh);width:min(100%,76svh);aspect-ratio:1}
+.portrait-frame{grid-column:2;grid-row:1 / span 2;position:relative;justify-self:center;align-self:end;width:min(100%,90vh);width:min(100%,90svh);aspect-ratio:1}
 #portrait{position:absolute;inset:0;z-index:1;width:100%;height:100%;display:block;pointer-events:none}
 .birthday-quote{grid-column:1;grid-row:2;margin:0;color:rgba(184,255,202,.88);font-size:clamp(17px,1.8vw,22px);line-height:1.7;letter-spacing:.025em;text-shadow:0 0 9px rgba(0,255,90,.35)}
 .scroll-cue{display:none}
@@ -25,7 +25,7 @@ body{overflow-x:hidden;color:#b8ffca;font-family:"Courier New",monospace}
   .greeting--top{font-size:clamp(26px,8vw,38px)}
   .greeting--bottom{font-size:clamp(22px,6.5vw,32px)}
   .portrait-frame{flex:none;width:min(98vw,72svh);margin-top:8px}
-  .scroll-cue{display:block;align-self:center;margin:0;padding:0 0 8px;color:rgba(184,255,202,.72);font-size:14px;letter-spacing:.12em;text-align:center}
+  .scroll-cue{display:block;align-self:center;margin:clamp(64px,12vh,100px) 0 clamp(180px,30vh,280px);padding:0 0 8px;color:rgba(184,255,202,.72);font-size:14px;letter-spacing:.12em;text-align:center}
   .scroll-cue span{display:block;font-size:22px;line-height:1.1;animation:scroll-nudge 1.2s ease-in-out infinite}
   .birthday-quote{padding:10px 24px 40px;font-size:18px;line-height:1.6;text-align:center}
 }
@@ -36,7 +36,7 @@ body{overflow-x:hidden;color:#b8ffca;font-family:"Courier New",monospace}
 @keyframes cursor-blink{to{visibility:hidden}}
 @keyframes heart-beat{50%{transform:scale(1.22)}}
 @keyframes scroll-nudge{50%{transform:translateY(5px)}}
-@media(prefers-reduced-motion:reduce){.typing-cursor,.heart.is-visible{animation:none}}
+@media(prefers-reduced-motion:reduce){.typing-cursor,.heart.is-visible,.scroll-cue span{animation:none}}
 </style>
 </head>
 <body>
@@ -204,6 +204,9 @@ body{overflow-x:hidden;color:#b8ffca;font-family:"Courier New",monospace}
     drawBackground();
     drawPortrait(0);
   };
+  window.addEventListener('scroll',()=>{
+    if(reduceMotion)drawBackground();
+  },{passive:true});
   window.addEventListener('resize',()=>{
     resizeBackground();
     if(image.complete&&image.naturalWidth){buildPortrait();drawPortrait(performance.now());}
